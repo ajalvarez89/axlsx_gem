@@ -1,6 +1,6 @@
 wb = xlsx_package.workbook
 ##styles
-black_orange = wb.styles.add_style(:bg_color => "FF000000",b: true,:fg_color => "00FF09", :border=>Axlsx::STYLE_THIN_BORDER,:alignment=>{:horizontal => :center})
+black_orange = wb.styles.add_style(:bg_color => "FF000000",b: true,:fg_color => "feb700", :border=>Axlsx::STYLE_THIN_BORDER,:alignment=>{:horizontal => :center})
 black_green = wb.styles.add_style(:bg_color => "FF000000",b: true,:fg_color => "00FF09", :border=>Axlsx::STYLE_THIN_BORDER,:alignment=>{:horizontal => :center})
 orange = wb.styles.add_style(:bg_color => "feb700",:fg_color => "FF000000", :border=>Axlsx::STYLE_THIN_BORDER,:alignment=>{:horizontal => :left})
 currency = wb.styles.add_style border: { style: :thin, color: "000000", outline: true}, format_code: "$#.##;[Red]$-#.##", alignment: {horizontal: :center}
@@ -30,9 +30,9 @@ wb.add_worksheet(name: "CostAnalysis") do |sheet|
   
   5.times {sheet.add_row []}
   sheet.add_row ["% de Desperdicio","Utilidad","Comision","Descuento Interno %","Description","Cantidad","UNIT COST($)","Costo ($)","Porcentaje","Costo/m2","Precio de Venta($) Sin descuento","Precio de Venta ($) Con descuento","Comision($)","CLASIFICACION"], :style=>gray_bg
-  sheet.add_row ["","","","",@hash[:marca1][:name],"","","","","","","",""], style: [full_border, full_border, full_border, full_border, orange,orange,orange,black_green,gray_bg,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
-  sheet.add_row ["","","","",@hash[:marca1][:alumin][:titulo],"","","","","","",""], style: [full_border, full_border, full_border, full_border, full_border,full_border,full_border,black_green,gray_bg,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
-  sheet.add_row ["","","","",@hash[:marca1][:alumin][:tipo],@hash[:marca1][:alumin][:cant],@hash[:marca1][:alumin][:cost_unit].to_f,@hash[:marca1][:alumin][:cost_unit].to_f,"","","",""], style: [full_border, full_border, full_border, full_border, full_border,full_border,full_border,black_green,gray_bg,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
+  sheet.add_row ["","","","",@hash[:marca1][:name],"","","","","","ssss","","","",""], style: [full_border, full_border, full_border, full_border, orange,orange,orange,black_green,gray_bg,full_border,black_orange,black_orange,full_border,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
+  sheet.add_row ["","","","",@hash[:marca1][:alumin][:titulo],"","","","","","","","",""], style: [full_border, full_border, full_border, full_border, full_border,full_border,full_border,black_green,gray_bg,full_border,black_orange,black_orange,full_border,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
+  sheet.add_row ["","","","",@hash[:marca1][:alumin][:tipo],@hash[:marca1][:alumin][:cant],@hash[:marca1][:alumin][:cost_unit].to_f,@hash[:marca1][:alumin][:cost_unit].to_f,"","","","","",""], style: [full_border, full_border, full_border, full_border, full_border,full_border,full_border,black_green,gray_bg,full_border,black_orange,black_orange,full_border,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
   
   
   @products.each do |product|
