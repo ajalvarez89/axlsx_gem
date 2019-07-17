@@ -1,2 +1,7 @@
-<h1>list of Products</h1>
-<%= link_to  "Download as .xlsx", products_path(format: :xlsx) %>
+<h1>List of Products</h1>
+  <%= link_to  "Download as .xlsx", products_path(format: :xlsx) %>
+  <br>
+  <%= link_to  "Sales Document .xlsx", products_sales_document_path(format: :xlsx) %>
+
+<br>
+<a href="/products/sales_document/" >Excel</a>

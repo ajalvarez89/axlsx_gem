@@ -1,0 +1,299 @@
+wb = xlsx_package.workbook
+currency = wb.styles.add_style border: { style: :thin, color: "000000", outline: true}, format_code: "$#.##;[Red]$-#.##", alignment: {horizontal: :center}
+gray_bg = wb.styles.add_style bg_color: "9FA8B7", alignment: {horizontal: :center }, border: { style: :thin, color: "000000", outline: true }
+horizontal_center = wb.styles.add_style alignment: {horizontal: :center}, border: { style: :thin, color: "000000", outline: true }
+full_border = wb.styles.add_style border: { style: :thin, color: "000000", outline: true }
+yellow_background = wb.styles.add_style bg_color: "FFFEC6", border: { style: :thin, color: "000000", outline: true }
+two_decimals = wb.styles.add_style border: { style: :thin, color: "000000", outline: true}, format_code: "#.##", alignment: {horizontal: :center} 
+
+# Adding General Worksheet
+wb.add_worksheet(name: "General") do |sheet|
+  image =  Rails.root.join('public/excel').to_s + "/ExcelLogo.png"
+  sheet.add_image(image_src: image, noSelect: false, noMove: false, start_at: [0,0], width: 405, height: 113) 
+  2.times {sheet.add_row []}
+  sheet.add_row ["", "", "", "Date: ", @sales_doc.try(:created_at)]
+  sheet.add_row ["", "", "", "User: ", current_user.email]
+  5.times {sheet.add_row []}
+  sheet.add_row ["Order Details"], style: [gray_bg]
+  sheet.merge_cells("A10:E10")
+  sheet.add_row [ "Customer", @customer.try(:name), "", "Telephone", number_to_phone(@commercial_contact.try(:telephone))], style: [full_border, full_border, full_border, full_border, full_border]
+  sheet.add_row ["Project", @project.try(:name), "",  "Status", @sales_doc.try(:state).try(:titleize)], style: [full_border, full_border, full_border, full_border, full_border]
+  2.times {sheet.add_row []}
+  sheet.add_row [	"Assembly System Name", 
+  					"Configuration",
+					"Width",
+					"Height",
+					"Area", 
+					"U Factor",
+					"SHGC",
+					"MAXIMUM PSF",
+					"MAXIMUM PSF +",
+					"Unit Price", 
+					"Total Quantity", 
+					"Total Price"], 
+					style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg ,gray_bg ,gray_bg ,gray_bg ,gray_bg]
+  (@sales_doc.try(:line_items)||[]).each do |line_item|
+    sheet.add_row [	line_item.assembly_system_name,
+					line_item.assembly_name, 
+					line_item.manifest["frame"]["width"],
+					line_item.manifest["frame"]["height"],
+					line_item.manifest["frame"]["area"],
+					line_item.nfrc_u_factor,
+					line_item.nfrc_shgc,
+					line_item.max_internal_psf,
+					line_item.max_external_psf,
+					line_item.unit_price, 
+					line_item.quantity, 
+					line_item.price], 
+					style: [full_border, full_border, two_decimals, two_decimals, two_decimals, full_border, full_border, full_border , full_border, currency, full_border, currency]
+  end
+end
+
+def manifest_worksheet(wb,sheet,line_item,manifest)
+currency = wb.styles.add_style border: { style: :thin, color: "000000", outline: true}, format_code: "$#.##;[Red]$-#.##", alignment: {horizontal: :center}
+gray_bg = wb.styles.add_style bg_color: "9FA8B7", alignment: {horizontal: :center }, border: { style: :thin, color: "000000", outline: true }
+horizontal_center = wb.styles.add_style alignment: {horizontal: :center}, border: { style: :thin, color: "000000", outline: true }
+full_border = wb.styles.add_style border: { style: :thin, color: "000000", outline: true }
+yellow_background = wb.styles.add_style bg_color: "FFFEC6", border: { style: :thin, color: "000000", outline: true }
+two_decimals = wb.styles.add_style border: { style: :thin, color: "000000", outline: true}, format_code: "#.##", alignment: {horizontal: :center} 
+  sheet.add_row ["", "",  "Assembly Version: ", manifest["assembly_version"]],  style:[nil,nil, full_border,full_border]
+  if manifest["revision_number"]
+    sheet.add_row ["", "", "Revision Number:", manifest["revision_number"]],style:[nil,nil, full_border,full_border]
+  end
+  sheet.add_row ["", "",  "Glass Makeup: ", manifest["glass_makeup"]],  style:[nil,nil, full_border,full_border]
+  sheet.add_row ["", "",  "Aluminum Finish: ", manifest["aluminum_finish"]],  style:[nil,nil, full_border,full_border]
+  (manifest["parameters"] || []).each do |k,v|
+    sheet.add_row ["", "",  k, v], style:[nil,nil, full_border,full_border]
+  end
+  sheet.add_row []
+	sheet.add_row [	"Width (in)", 
+					manifest["frame"]["width"], 
+					"", 
+					"Assembly System", 
+					line_item.assembly_system_name], style: [yellow_background, full_border, full_border, yellow_background, full_border] 
+	sheet.add_row ["Height (in)", 
+					manifest["frame"]["height"], 
+					"",
+					"Assembly", 
+					line_item.assembly_name], style: [yellow_background, full_border, full_border, yellow_background, full_border]
+	sheet.add_row ["Area (SqFt)", 
+					manifest["frame"]["area"].to_f/144.0, 
+					"", 
+					"Order Quantity", 
+					line_item.quantity], style: [yellow_background, full_border, full_border, yellow_background, full_border]
+	sheet.add_row []
+	
+	# Adding Glass Piece breakdown table
+	sheet.add_row ["Glass Piece List", "", "","","","","","",""  ], style: [horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center]
+	current_row = sheet.rows.count 
+	sheet.merge_cells("A" + current_row.to_s + ":I" + current_row.to_s)
+	sheet.add_row ["Glass", 
+					"Width (in)", 
+					"Height (in)", 
+					"Area (sqft)", 
+					"Weight (lbs)",
+					"Thickness (in)", 
+					"Cost / SqFt", 
+					"Unit Cost", 
+					"Total Cost"], style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg]
+	manifest["panels"].each do |k,v|
+	  cost_per_sqft = v["glass_cost"].to_f/(v["glass_area"].to_f/144.0)
+	  line_cost = v["glass_cost"].to_f*line_item.quantity.to_f
+	  sheet.add_row ["Panel " + k, 
+	  				v["glass_width"].to_f, 
+					v["glass_height"].to_f, 
+					v["glass_area"].to_f/144.0, 
+					v["glass_weight"].to_f,
+					v["glass_thickness"].to_f, 
+					cost_per_sqft.to_f, 
+					v["glass_cost"].to_f,
+					line_cost ], style: [full_border,two_decimals, two_decimals, two_decimals, two_decimals, two_decimals, currency, currency, currency]
+	end
+	sheet.add_row []
+	
+	# Adding Aluminum Piece breakdown table
+	sheet.add_row ["Aluminum Piece List", "", "", "", "", "", "", ""], style: [horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center]
+	current_row = sheet.rows.count
+	sheet.merge_cells("A" + current_row.to_s + ":G" + current_row.to_s) 
+	sheet.add_row [	"Reference Code",
+          "Fab",
+					"Length",
+					"Cost per pound",
+					"Weight per inch",
+					"Weight",
+					"Unit Cost",
+					"Quantity",
+					"Total Cost"], style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg]
+	manifest["aluminum_parts"].each do |aluminum_piece|
+	  cost_per_pound = aluminum_piece["weight"].to_f > 0 ? aluminum_piece["cost_per_unit"].to_f/aluminum_piece["weight"].to_f : "N/A"
+	  sheet.add_row [aluminum_piece["reference_code"],
+					aluminum_piece["fab"],
+	  			aluminum_piece["length"].to_f,
+					cost_per_pound,
+					aluminum_piece["aluminum_lb_per_in"].to_f,
+					aluminum_piece["weight"].to_f,
+					aluminum_piece["cost_per_unit"].to_f,
+					aluminum_piece["quantity"].to_f,
+					aluminum_piece["cost"].to_f], style: [full_border, two_decimals, two_decimals, currency, two_decimals, two_decimals, two_decimals, full_border, currency]
+	end
+	sheet.add_row []
+	
+
+if (line_item.manifest['storefront'].present?)
+	# Adding Aluminum Piece breakdown table
+	sheet.add_row ["Sub Sill Aluminum Piece List", "", "", "", "", "", "", ""], style: [horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center]
+	current_row = sheet.rows.count
+	sheet.merge_cells("A" + current_row.to_s + ":G" + current_row.to_s) 
+	sheet.add_row [	"Reference Code",
+          "Fab",
+					"Length",
+					"Cost per pound",
+					"Weight per inch",
+					"Weight",
+					"Unit Cost",
+					"Quantity",
+					"Total Cost"], style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg]
+  if manifest["sub_sill"]
+    manifest["sub_sill"]["aluminum_parts"].each do |aluminum_piece|
+      cost_per_pound = aluminum_piece["weight"].to_f > 0 ? aluminum_piece["cost_per_unit"].to_f/aluminum_piece["weight"].to_f : "N/A"
+      sheet.add_row [aluminum_piece["reference_code"],
+            aluminum_piece["fab"],
+            aluminum_piece["length"].to_f,
+            cost_per_pound,
+            aluminum_piece["aluminum_lb_per_in"].to_f,
+            aluminum_piece["weight"].to_f,
+            aluminum_piece["cost_per_unit"].to_f,
+            aluminum_piece["quantity"].to_f,
+            aluminum_piece["cost"].to_f], style: [full_border, two_decimals, two_decimals, currency, two_decimals, two_decimals, two_decimals, full_border, currency]
+    end
+  end
+	sheet.add_row []
+end
+
+	# Adding Accessories Piece Breakdown
+	sheet.add_row ["Accessories Piece List", "", "", "", "", "", "", ""], style: [horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center,horizontal_center]
+	current_row = sheet.rows.count
+	sheet.merge_cells("A" + current_row.to_s + ":H" + current_row.to_s) 
+    sheet.add_row ["SAP Part Nbr", 
+					"Description", 
+					"Placement",  
+					"Cost per Unit", 
+					"Quantity", 
+					"Unit", 
+					"Formula", 
+					"Total Cost"], style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg]
+	manifest["accessories"].each do |acc|
+	  sheet.add_row [acc["sap"], acc["description"], acc["placement"], acc["cost_per_unit"], acc["quantity"], acc["unit"], acc["formula"], acc["cost"]], style: [full_border, full_border, full_border, currency, two_decimals, full_border, full_border, currency]
+	end
+	sheet.add_row []
+if manifest["muntin"] && !manifest["muntin"].keys.blank?
+  sheet.add_row []
+  sheet.add_row []
+  sheet.add_row ["Muntin Aluminum Parts", "", "", "", "", "", "", "", ""], style: [horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center]
+  current_row = sheet.rows.count
+  sheet.merge_cells("A" + current_row.to_s + ":J" + current_row.to_s) 
+  sheet.add_row ["Reference Code", "Placement", "Panel", "lb/in", "Weight", "Length", "Orientation", "Cost"], style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg]
+  manifest["muntin"]["aluminum_parts"].each do |al_part|
+    sheet.add_row [al_part["reference_code"].try(:titleize), al_part["placement"].try(:titleize), al_part["panel"].try(:titleize), al_part["lb_per_in"], al_part["weight"], al_part["length"], al_part["orientation"], al_part["cost"]], style: [horizontal_center, horizontal_center, horizontal_center, horizontal_center, two_decimals, two_decimals, horizontal_center, currency]
+  end
+
+  sheet.add_row []
+  sheet.add_row []
+  sheet.add_row ["Muntin Accessories", "", "", "", "", "", "", ""], style: [horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center]
+  current_row = sheet.rows.count
+  sheet.merge_cells("A" + current_row.to_s + ":J" + current_row.to_s) 
+  sheet.add_row ["SAP", "Placement", "Panel", "Quantity", "Unit", "Description", "Cost"], style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg]
+  manifest["muntin"]["accessories"].each do |al_part|
+    sheet.add_row [al_part["sap"].try(:upcase), al_part["placement"].try(:titleize), al_part["panel"].try(:titleize),  al_part["quantity"], al_part["unit"].try(:upcase), al_part["description"].try(:titleize), al_part["cost"]], style: [horizontal_center, horizontal_center, horizontal_center, two_decimals, horizontal_center, horizontal_center, currency]
+  end
+  sheet.add_row ["Muntin Cost", "", "", "", "", "", manifest["muntin"]["cost"]], style: [horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, currency]
+  current_row = sheet.rows.count
+  sheet.merge_cells("A" + current_row.to_s + ":F" + current_row.to_s)
+
+	sheet.add_row []
+	sheet.add_row []
+	sheet.add_row []
+	sheet.add_row []
+end
+
+if manifest["screen"] && !manifest["screen"].keys.blank?
+  sheet.add_row []
+  sheet.add_row []
+  sheet.add_row ["Screen Aluminum Parts", "", "", "", "", "", "", "", ""], style: [horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center]
+  current_row = sheet.rows.count
+  sheet.merge_cells("A" + current_row.to_s + ":J" + current_row.to_s) 
+  sheet.add_row ["Reference Code", "Placement", "Panel", "lb/in", "Weight", "Length", "Orientation", "Cost"], style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg]
+  manifest["screen"]["aluminum_parts"].each do |al_part|
+    sheet.add_row [al_part["reference_code"].try(:titleize), al_part["placement"].try(:titleize), al_part["panel"].try(:titleize), al_part["lb_per_in"], al_part["weight"], al_part["length"], al_part["orientation"], al_part["cost"]], style: [horizontal_center, horizontal_center, horizontal_center, horizontal_center, two_decimals, two_decimals, horizontal_center, currency]
+  end
+
+  sheet.add_row []
+  sheet.add_row []
+  sheet.add_row ["Screen Accessories", "", "", "", "", "", "", ""], style: [horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center]
+  current_row = sheet.rows.count
+  sheet.merge_cells("A" + current_row.to_s + ":J" + current_row.to_s) 
+  sheet.add_row ["SAP", "Placement", "Panel", "Quantity", "Unit", "Description", "Cost"], style: [gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg, gray_bg]
+  manifest["screen"]["accessories"].each do |al_part|
+    sheet.add_row [al_part["sap"].try(:upcase), al_part["placement"].try(:titleize), al_part["panel"].try(:titleize),  al_part["quantity"], al_part["unit"].try(:upcase), al_part["description"].try(:titleize), al_part["cost"]], style: [horizontal_center, horizontal_center, horizontal_center, two_decimals, horizontal_center, horizontal_center, currency]
+  end
+  sheet.add_row ["Screen Cost", "", "", "", "", "", manifest["screen"]["cost"]], style: [horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, horizontal_center, currency]
+  current_row = sheet.rows.count
+  sheet.merge_cells("A" + current_row.to_s + ":F" + current_row.to_s)
+
+	sheet.add_row []
+	sheet.add_row []
+	sheet.add_row []
+	sheet.add_row []
+end
+
+	#Adding total costs summary table
+	sheet.add_row ["Total Costs", ""], style: [gray_bg, horizontal_center]
+	graph_row = sheet.rows.count
+  area = line_item.manifest["frame"]["area"].to_f/144.0
+
+	total_aluminum_weight = manifest["aluminum_parts"].inject(0.0){|sum,a| a["weight"].to_f + sum}
+  total_glass_area      = manifest["panels"].inject(0) do |sum,p|
+	  (p[1]["glass_area"].to_f/144.0)+sum
+  end
+  glass_cost_sqft       = manifest["total_glass_cost"].to_f/total_glass_area
+
+	sheet.merge_cells("A" + graph_row.to_s + ":B" + graph_row.to_s)
+	sheet.add_row ["Total Glass Costs", manifest["total_glass_cost"], manifest["glass_makeup"], glass_cost_sqft], style: [gray_bg, currency,gray_bg, currency,currency]
+	sheet.add_row ["Total Aluminum Costs", manifest["total_aluminum_cost"], "", (manifest["total_aluminum_cost"].to_f/total_aluminum_weight).truncate(2)], style: [gray_bg, currency,currency,currency]
+	sheet.add_row ["Total Accessory Costs", manifest["total_accessories_cost"], ""], style: [gray_bg, currency]
+	sheet.add_row ["Total Muntin Costs", manifest["muntin"]["cost"] || 0, ""], style: [gray_bg, currency]
+	sheet.add_row ["Total Screen Costs", manifest["screen"] ? manifest["screen"]["cost"] : 0, ""], style: [gray_bg, currency]
+	sheet.add_row ["Total Shipping Costs", manifest["shipping_cost"], "", (manifest["shipping_cost"].to_f/area).truncate(2)], style: [gray_bg, currency, currency, currency]
+	sheet.add_row ["Total Labor Costs", manifest["labor_cost"], "", (manifest["labor_cost"].to_f/area).truncate(2)], style: [gray_bg, currency, currency, currency]
+	sheet.add_row ["Total Packaging Costs", manifest["packaging_cost"], "", (manifest["packaging_cost"].to_f/area).truncate(2)], style: [gray_bg, currency, currency,currency]
+	sheet.add_row ["Cost", line_item.total_cost, "", ""], style: [gray_bg, currency]
+	sheet.add_row ["Price", line_item.customer_price, "", ""], style: [gray_bg, currency]
+	sheet.add_row ["Margin", "#{((line_item.customer_price-line_item.total_cost)/line_item.customer_price).truncate(2)*100} %", "", ""], style: [gray_bg, gray_bg]
+  sheet.add_chart(Axlsx::Pie3DChart, :start_at => [3,graph_row], :end_at => [8, graph_row+10], title: "Cost Breakdown") do |chart|
+    chart.add_series data: [manifest["total_accessories_cost"], manifest["total_aluminum_cost"], manifest["total_glass_cost"], manifest["shipping_cost"], manifest["labor_cost"], manifest["packaging_cost"]], labels: ["Accessories Costs", "Aluminum Costs", "Glass Costs", "Shipping Costs", "Labor Costs", "Packaging Costs"]
+  end
+end
+
+# Creating one worksheet per line item
+(@sales_doc.try(:line_items) || []).each do |line_item|
+  total_misc_cost = line_item.manifest["labor_cost"].to_f + line_item.manifest["shipping_cost"].to_f + line_item.manifest["packaging_cost"].to_f 
+  image =  Rails.root.join('public/excel').to_s + "/ExcelLogo.png"
+  wb.add_worksheet(name: "#" + (@sales_doc.line_items.index(line_item) + 1).to_s) do |sheet|
+    if (line_item.manifest['storefront'].blank?)
+      manifest_worksheet(wb,sheet,line_item,line_item.manifest)
+    else
+      line_item.manifest['panel_manifests'].each_with_index do |manifest,index|
+        2.times {sheet.add_row []}
+        sheet.add_row ["Panel #{index+1}"], style: [gray_bg]
+        row = sheet.rows.count
+        sheet.merge_cells("A" + row.to_s + ":G" + row.to_s)
+        2.times {sheet.add_row []}
+        manifest_worksheet(wb,sheet,line_item,manifest)
+      end
+    end
+  end  
+
+
+end
+
+

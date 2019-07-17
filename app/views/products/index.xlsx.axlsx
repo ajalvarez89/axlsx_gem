@@ -1,8 +1,45 @@
 wb = xlsx_package.workbook
-wb.add_worksheet(name: "Products") do |sheet|
+##styles
+black_orange = wb.styles.add_style(:bg_color => "FF000000",b: true,:fg_color => "00FF09", :border=>Axlsx::STYLE_THIN_BORDER,:alignment=>{:horizontal => :center})
+black_green = wb.styles.add_style(:bg_color => "FF000000",b: true,:fg_color => "00FF09", :border=>Axlsx::STYLE_THIN_BORDER,:alignment=>{:horizontal => :center})
+orange = wb.styles.add_style(:bg_color => "feb700",:fg_color => "FF000000", :border=>Axlsx::STYLE_THIN_BORDER,:alignment=>{:horizontal => :left})
+currency = wb.styles.add_style border: { style: :thin, color: "000000", outline: true}, format_code: "$#.##;[Red]$-#.##", alignment: {horizontal: :center}
+gray_bg = wb.styles.add_style b: true, bg_color: "9FA8B7", alignment: {horizontal: :center }, border: { style: :thin, color: "000000", outline: true }
+horizontal_center = wb.styles.add_style alignment: {horizontal: :center}, border: { style: :thin, color: "000000", outline: true }
+full_border = wb.styles.add_style border: { style: :thin, color: "000000", outline: true }
+yellow_background = wb.styles.add_style bg_color: "FFFEC6", border: { style: :thin, color: "000000", outline: true }
+two_decimals = wb.styles.add_style border: { style: :thin, color: "000000", outline: true}, format_code: "#.##", alignment: {horizontal: :center} 
+wrap_text = wb.styles.add_style :fg_color=> "FFFFFF",:b => true,:bg_color => "004586",:sz => 12,:border => { :style => :thin, :color => "000000",outline: true },:alignment => { :horizontal => :center,:vertical => :center ,:wrap_text => true}
+
+wb.add_worksheet(name: "CostAnalysis") do |sheet|
+  2.times {sheet.add_row []}
+  sheet.add_row ["", "", "", "Date: ", ""],style: [nil, nil, nil, full_border, full_border]
+  sheet.add_row ["", "", "", "User: ", ""],style: [nil, nil, nil, full_border, full_border]
+  5.times {sheet.add_row []}
+ 
+ 
+  sheet.add_row ["Cost Analysis"],style: [gray_bg]
+  sheet.add_row [ "Customer", "xx", "Telephone", "xx"], style: [full_border, full_border, full_border, full_border]
+  sheet.add_row ["Project", "xx",  "Status", "xx"], style: [full_border, full_border, full_border, full_border]
+  2.times {sheet.add_row []}
+
+  sheet.add_row ["Customer Details", "", "Billing Address", "", "Shipping Address"], style: [gray_bg,nil,gray_bg,nil,gray_bg]
+  sheet.add_row(["","", "","",""], style: [full_border, nil, full_border, nil, full_border],widths: [:auto, :auto, :auto, :auto, :auto ])
+  sheet.add_row(["","", "","", ""], style: [full_border, nil, full_border, nil, full_border], widths: [:auto, :auto, :auto, :auto, :auto ])
+  sheet.add_row(["","", "Barranquilla" + " Atlantico","", "", ""], style: [full_border, nil, full_border, nil, full_border], widths: [:auto, :auto, :auto, :auto, :auto ])
+  
+  5.times {sheet.add_row []}
+  sheet.add_row ["% de Desperdicio","Utilidad","Comision","Descuento Interno %","Description","Cantidad","UNIT COST($)","Costo ($)","Porcentaje","Costo/m2","Precio de Venta($) Sin descuento","Precio de Venta ($) Con descuento","Comision($)","CLASIFICACION"], :style=>gray_bg
+  sheet.add_row ["","","","",@hash[:marca1][:name],"","","","","","","",""], style: [full_border, full_border, full_border, full_border, orange,orange,orange,black_green,gray_bg,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
+  sheet.add_row ["","","","",@hash[:marca1][:alumin][:titulo],"","","","","","",""], style: [full_border, full_border, full_border, full_border, full_border,full_border,full_border,black_green,gray_bg,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
+  sheet.add_row ["","","","",@hash[:marca1][:alumin][:tipo],@hash[:marca1][:alumin][:cant],@hash[:marca1][:alumin][:cost_unit].to_f,@hash[:marca1][:alumin][:cost_unit].to_f,"","","",""], style: [full_border, full_border, full_border, full_border, full_border,full_border,full_border,black_green,gray_bg,full_border], widths: [:auto, :auto, :auto, :auto, :auto ]
+  
+  
   @products.each do |product|
     sheet.add_row [product.title, product.price]
   end
-  sheet.add_row ["Project", @project.try(:name)]
+
   
+  sheet.add_row ["TOTAL",@total], style: [gray_bg]
+  sheet.add_row ["PROMEDIO",@prome]
 end
